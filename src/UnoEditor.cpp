@@ -1,8 +1,6 @@
-#include "PluginEditor.h"
+#include "UnoEditor.h"
 
-#include "PluginProcessor.h"
-
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor& p)
+UnoEditor::UnoEditor(UnoProcessor& p)
 	: AudioProcessorEditor(&p)
 	, m_processorRef(p)
 {
@@ -29,7 +27,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 	setSize(820, 560);
 }
 
-void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
+void UnoEditor::paint(juce::Graphics& g)
 {
 	calculateInitialRegions();
 	g.fillAll(juce::Colours::darkgrey);
@@ -50,14 +48,14 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
 	paintSampleWaveform(g);
 }
 
-void AudioPluginAudioProcessorEditor::resized()
+void UnoEditor::resized()
 {
 	positionSliceButtons();
 	positionSliceSettings();
 	positionTopBar();
 }
 
-void AudioPluginAudioProcessorEditor::positionSliceButtons()
+void UnoEditor::positionSliceButtons()
 {
 	calculateInitialRegions();
 
@@ -83,7 +81,7 @@ void AudioPluginAudioProcessorEditor::positionSliceButtons()
 	calculateInitialRegions();
 }
 
-void AudioPluginAudioProcessorEditor::positionSliceSettings()
+void UnoEditor::positionSliceSettings()
 {
 	calculateInitialRegions();
 
@@ -101,7 +99,7 @@ void AudioPluginAudioProcessorEditor::positionSliceSettings()
 	calculateInitialRegions();
 }
 
-void AudioPluginAudioProcessorEditor::paintSampleWaveform(juce::Graphics& g)
+void UnoEditor::paintSampleWaveform(juce::Graphics& g)
 {
 	calculateInitialRegions();
 	g.setColour(juce::Colours::black);
@@ -120,7 +118,7 @@ void AudioPluginAudioProcessorEditor::paintSampleWaveform(juce::Graphics& g)
 	calculateInitialRegions();
 }
 
-void AudioPluginAudioProcessorEditor::positionTopBar()
+void UnoEditor::positionTopBar()
 {
 	calculateInitialRegions();
 
@@ -139,7 +137,7 @@ void AudioPluginAudioProcessorEditor::positionTopBar()
 	calculateInitialRegions();
 }
 
-void AudioPluginAudioProcessorEditor::calculateInitialRegions()
+void UnoEditor::calculateInitialRegions()
 {
 	auto area = getLocalBounds();
 	m_sliceButtonsRegion = area.removeFromBottom(getHeight() / 5);
