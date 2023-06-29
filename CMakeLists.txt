@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 project(uno-sampler VERSION 0.1.0)
 
 add_subdirectory(lib/JUCE)
-juce_add_plugin(UnoSampler PRODUCT_NAME "Uno Sampler" FORMATS AU VST3 Standalone)
+juce_add_plugin(UnoSampler PRODUCT_NAME "Uno" FORMATS AU VST3 Standalone)
 
 target_sources(UnoSampler
     PRIVATE
