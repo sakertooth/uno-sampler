@@ -12,40 +12,49 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 		addAndMakeVisible(m_sliceButtons[i]);
 	}
 
-	m_reverseButton.setButtonText("REVERSE");
-	m_playButton.setButtonText("PLAY");
-	m_loadSampleButton.setButtonText("LOAD SAMPLE");
+	m_sampleNameLabel.setColour(juce::Label::ColourIds::backgroundColourId, juce::Colour{34, 34, 34});
+	m_sampleNameLabel.setColour(juce::Label::ColourIds::outlineColourId, juce::Colours::whitesmoke);
+	m_sampleNameLabel.setFont(juce::Font{12.0f, juce::Font::bold});
+	m_sampleNameLabel.setEditable(false);
+	m_sampleNameLabel.setJustificationType(juce::Justification::left);
 
+	addAndMakeVisible(m_sliceLevel);
 	addAndMakeVisible(m_sliceAttack);
 	addAndMakeVisible(m_sliceRelease);
-	addAndMakeVisible(m_reverseButton);
-	addAndMakeVisible(m_sliceKeyShift);
-	addAndMakeVisible(m_sliceTimeStretch);
-	addAndMakeVisible(m_playButton);
 	addAndMakeVisible(m_sampleNameLabel);
+	addAndMakeVisible(m_playButton);
 	addAndMakeVisible(m_loadSampleButton);
 	setSize(820, 560);
 }
 
 void UnoEditor::paint(juce::Graphics& g)
 {
-	calculateInitialRegions();
-	g.fillAll(juce::Colours::darkgrey);
+	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
+	g.setColour(juce::Colour{34, 34, 34});
+	g.fillRect(sliceButtonsRegion);
+
+	g.setColour(juce::Colour{51, 51, 51});
+	g.fillRect(sliceSettingsRegion);
 
 	g.setColour(juce::Colours::black);
-	g.fillRect(m_sliceButtonsRegion);
+	g.fillRect(sampleWaveformRegion);
 
-	g.setColour(juce::Colours::grey);
-	g.fillRect(m_sliceSettingsRegion);
+	g.setColour(juce::Colour{51, 51, 51});
+	g.fillRect(topBarRegion);
 
 	g.setColour(juce::Colours::black);
-	g.fillRect(m_sampleWaveformRegion);
-
-	g.setColour(juce::Colours::grey);
-	g.fillRect(m_topBarRegion);
-	calculateInitialRegions();
-
-	paintSampleWaveform(g);
+	if (m_sampleWaveform.get() == nullptr || m_sampleWaveform->getNumChannels() == 0)
+	{
+		g.fillRect(sampleWaveformRegion);
+		g.setColour(juce::Colours::white);
+		g.drawFittedText("No File Loaded", sampleWaveformRegion, juce::Justification::centred, 1);
+	}
+	else
+	{
+		g.fillRect(sampleWaveformRegion);
+		g.setColour(juce::Colours::darkblue);
+		m_sampleWaveform->drawChannels(g, sampleWaveformRegion, 0.0, m_sampleWaveform->getTotalLength(), 1.0f);
+	}
 }
 
 void UnoEditor::resized()
@@ -57,14 +66,13 @@ void UnoEditor::resized()
 
 void UnoEditor::positionSliceButtons()
 {
-	calculateInitialRegions();
-
+	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
 	const auto numRows = 2;
 	const auto regionMargin = 10;
-	const auto sliceButtonSize = std::array<int, 2>{32, 32};
+	const auto sliceButtonSize = std::array<int, 2>{40, 32};
 	const auto numButtonsPerRow = static_cast<int>(m_sliceButtons.size() / numRows);
-	const auto rowOne = m_sliceButtonsRegion.removeFromTop(m_sliceButtonsRegion.getHeight() / 2);
-	const auto rowTwo = m_sliceButtonsRegion.removeFromTop(m_sliceButtonsRegion.getHeight() / 2);
+	const auto rowOne = sliceButtonsRegion.removeFromTop(sliceButtonsRegion.getHeight() / 2);
+	const auto rowTwo = sliceButtonsRegion.removeFromTop(sliceButtonsRegion.getHeight() / 2);
 
 	for (auto row = 0; row < numRows; ++row)
 	{
@@ -77,71 +85,42 @@ void UnoEditor::positionSliceButtons()
 			m_sliceButtons[static_cast<size_t>(row * numButtonsPerRow + button)].setBounds(buttonRect);
 		}
 	}
-
-	calculateInitialRegions();
 }
 
 void UnoEditor::positionSliceSettings()
 {
-	calculateInitialRegions();
+	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
+	const auto width = sliceSettingsRegion.getWidth();
+	const auto numControlsGroup1 = 3;
+	const auto spacingGroup1 = width / 2 / numControlsGroup1;
+	const auto margin = 2;
 
-	const auto width = m_sliceSettingsRegion.getWidth();
-	const auto numControls = 5;
-	const auto spacing = width / numControls;
-	const auto margin = 10;
-
-	m_sliceAttack.setBounds(m_sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-	m_sliceRelease.setBounds(m_sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-	m_reverseButton.setBounds(m_sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-	m_sliceKeyShift.setBounds(m_sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-	m_sliceTimeStretch.setBounds(m_sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-
-	calculateInitialRegions();
-}
-
-void UnoEditor::paintSampleWaveform(juce::Graphics& g)
-{
-	calculateInitialRegions();
-	g.setColour(juce::Colours::black);
-	if (m_sampleWaveform.get() == nullptr || m_sampleWaveform->getNumChannels() == 0)
-	{
-		g.fillRect(m_sampleWaveformRegion);
-		g.setColour(juce::Colours::white);
-		g.drawFittedText("No File Loaded", m_sampleWaveformRegion, juce::Justification::centred, 1);
-	}
-	else
-	{
-		g.fillRect(m_sampleWaveformRegion);
-		g.setColour(juce::Colours::darkblue);
-		m_sampleWaveform->drawChannels(g, m_sampleWaveformRegion, 0.0, m_sampleWaveform->getTotalLength(), 1.0f);
-	}
-	calculateInitialRegions();
+	m_sliceLevel.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
+	m_sliceAttack.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
+	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
 }
 
 void UnoEditor::positionTopBar()
 {
-	calculateInitialRegions();
-
-	const auto width = m_topBarRegion.getWidth();
-	const auto numControls = 3;
-	const auto spacing = width / numControls;
+	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
 	const auto margin = 10;
 
-	auto playRect = m_topBarRegion.removeFromLeft(spacing).reduced(margin);
-	playRect.setSize(100, 50);
-	m_playButton.setBounds(playRect);
+	m_playButton.setSize(topBarRegion.proportionOfWidth(0.2f), topBarRegion.getHeight() - margin);
+	m_playButton.setBounds(topBarRegion.removeFromLeft(m_playButton.getWidth() + margin).reduced(margin));
 
-	m_sampleNameLabel.setBounds(m_topBarRegion.removeFromLeft(spacing).reduced(margin));
-	m_loadSampleButton.setBounds(m_topBarRegion.removeFromLeft(spacing).reduced(margin));
+	m_sampleNameLabel.setSize(topBarRegion.proportionOfWidth(0.4f), topBarRegion.getHeight() - margin);
+	m_sampleNameLabel.setBounds(topBarRegion.removeFromLeft(m_sampleNameLabel.getWidth() + margin).reduced(margin));
 
-	calculateInitialRegions();
+	m_loadSampleButton.setSize(topBarRegion.proportionOfWidth(0.4f), topBarRegion.getHeight() - margin);
+	m_loadSampleButton.setBounds(topBarRegion.removeFromLeft(m_loadSampleButton.getWidth() + margin).reduced(margin));
 }
 
-void UnoEditor::calculateInitialRegions()
+std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
 {
 	auto area = getLocalBounds();
-	m_sliceButtonsRegion = area.removeFromBottom(getHeight() / 5);
-	m_sliceSettingsRegion = area.removeFromBottom(getHeight() / 8);
-	m_sampleWaveformRegion = area.removeFromBottom(static_cast<int>(getHeight() / 1.82));
-	m_topBarRegion = area.removeFromBottom(getHeight() / 8);
+	auto sliceButtonsRegion = area.removeFromBottom(area.getHeight() / 5);
+	auto sliceSettingsRegion = area.removeFromBottom(area.getHeight() / 5);
+	auto sampleWaveformRegion = area.removeFromBottom(area.getHeight() - 50);
+	auto topBarRegion = area.removeFromTop(50);
+	return {sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion};
 }

@@ -3,6 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include "UnoProcessor.h"
+#include "uno/gui/KnobWithLabel.h"
 
 class UnoEditor : public juce::AudioProcessorEditor
 {
@@ -10,37 +11,24 @@ public:
 	explicit UnoEditor(UnoProcessor&);
 
 	void paint(juce::Graphics& g) override;
-	void paintSampleWaveform(juce::Graphics& g);
-
 	void resized() override;
-
-	void calculateInitialRegions();
 
 	void positionSliceButtons();
 	void positionSliceSettings();
 	void positionTopBar();
 
+	std::array<juce::Rectangle<int>, 4> getScreenRegions() const;
+
 private:
 	UnoProcessor& m_processorRef;
-
-	juce::Rectangle<int> m_sliceButtonsRegion;
 	std::array<juce::TextButton, 32> m_sliceButtons;
-
-	juce::Rectangle<int> m_sliceSettingsRegion;
-	juce::Slider m_sliceAttack;
-	juce::Slider m_sliceRelease;
-	juce::Slider m_sliceKeyShift;
-	juce::Slider m_sliceTimeStretch;
-	juce::TextButton m_reverseButton;
-
-	juce::Rectangle<int> m_sampleWaveformRegion;
 	std::unique_ptr<juce::AudioThumbnail> m_sampleWaveform;
 	std::unique_ptr<juce::AudioThumbnailCache> m_sampleWaveformCache;
-
-	juce::Rectangle<int> m_topBarRegion;
-	juce::TextButton m_playButton;
+	KnobWithLabel m_sliceLevel = KnobWithLabel("LEVEL");
+	KnobWithLabel m_sliceAttack = KnobWithLabel("ATTACK");
+	KnobWithLabel m_sliceRelease = KnobWithLabel("RELEASE");
+	juce::TextButton m_playButton = juce::TextButton("PLAY");
 	juce::Label m_sampleNameLabel;
 	juce::TextButton m_loadSampleButton;
-
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoEditor)
 };

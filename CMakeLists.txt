@@ -7,7 +7,8 @@ juce_add_plugin(UnoSampler PRODUCT_NAME "Uno" FORMATS AU VST3 Standalone)
 target_sources(UnoSampler
     PRIVATE
         src/UnoProcessor.cpp
-        src/UnoEditor.cpp)
+        src/UnoEditor.cpp
+        src/uno/gui/KnobWithLabel.cpp)
 
 target_compile_definitions(UnoSampler
     PUBLIC
