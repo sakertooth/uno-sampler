@@ -3,7 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include "UnoProcessor.h"
-#include "uno/gui/KnobWithLabel.h"
+#include "gui/KnobWithLabel.h"
 
 class UnoEditor : public juce::AudioProcessorEditor
 {
