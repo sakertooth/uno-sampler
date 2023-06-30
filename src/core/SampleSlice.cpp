@@ -3,80 +3,98 @@
 #include <algorithm>
 #include <iterator>
 
-SampleSlice::SampleSlice(const juce::AudioSampleBuffer& buffer, int maxNumSlices)
+SampleSlice::SampleSlice(const juce::AudioSampleBuffer& buffer)
 	: m_sample(buffer)
-	, m_maxNumSlices(maxNumSlices)
 {
 }
 
-bool SampleSlice::addSlice(const Slice& slice)
+auto SampleSlice::getSlice(size_t index) -> Slice*
 {
-	if (m_slices.size() == static_cast<size_t>(m_maxNumSlices)) { return false; }
-	m_slices.push_back(slice);
-	return true;
+	if (index < 0 || index > m_slices.size()) { return nullptr; }
+	return &m_slices[index];
 }
 
-bool SampleSlice::appendSlice()
+auto SampleSlice::disableAllSlices() -> void
 {
-	;
-	const auto newSliceIndex = static_cast<int>(m_slices.size());
-	auto newSlicePosition = newSliceIndex * getNumFramesInBuffer() / (newSliceIndex + 1);
-	return addSlice(Slice{newSlicePosition});
+	for (auto& slice : m_slices)
+	{
+		slice.setEnabled(false);
+	}
 }
 
-SampleSlice::Slice* SampleSlice::getSlice(int index)
+auto SampleSlice::getNumFramesForSlice(size_t index) -> int
 {
-	if (static_cast<size_t>(index) > m_slices.size() - 1 || index < 0) { return nullptr; }
-	auto it = m_slices.begin();
-	std::advance(it, index);
-	return &*it;
+	if (index < 0 || index >= m_slices.size()) { throw std::out_of_range("SampleSlice::getNumFramesForSlice: Index of out range"); }
+	if (index == m_slices.size() - 1) { return getNumFramesInBuffer() - getSlice(index)->getFramePosition(); }
+	return getSlice(index + 1)->getFramePosition() - getSlice(index)->getFramePosition();
 }
 
-int SampleSlice::getNumFramesForSlice(int index)
-{
-	auto slice = getSlice(index);
-	if (slice == nullptr) { return -1; }
-
-	if (static_cast<size_t>(index) == m_slices.size() - 1) { return getNumFramesInBuffer() - slice->framePosition; }
-
-	auto sliceIt = m_slices.begin();
-	std::advance(sliceIt, index);
-	auto nextSliceIt = std::next(sliceIt, 1);
-	return nextSliceIt->framePosition - sliceIt->framePosition;
-}
-
-int SampleSlice::getNumFramesInBuffer() const
+auto SampleSlice::getNumFramesInBuffer() const -> int
 {
 	return m_sample.getNumSamples() / m_sample.getNumChannels();
 }
 
-bool SampleSlice::removeSlice(int index)
-{
-    if (static_cast<size_t>(index) > m_slices.size() - 1 || index < 0) { return false; }
-	auto it = m_slices.begin();
-	std::advance(it, index);
-	m_slices.erase(it);
-}
-
-void SampleSlice::clearSlices()
-{
-	m_slices.clear();
-}
-
-void SampleSlice::removeInvalidSlices()
-{
-	m_slices.remove_if([this](const Slice& slice) {
-		return slice.framePosition > m_sample.getNumSamples() / m_sample.getNumChannels() || slice.framePosition < 0;
-	});
-}
-
-const juce::AudioSampleBuffer& SampleSlice::getSample() const
+auto SampleSlice::getSample() const -> const juce::AudioSampleBuffer&
 {
 	return m_sample;
 }
 
-void SampleSlice::setSample(const juce::AudioSampleBuffer& sample)
+auto SampleSlice::setSample(const juce::AudioSampleBuffer& sample) -> void
 {
 	m_sample = sample;
-	clearSlices();
+}
+
+auto SampleSlice::Slice::getFramePosition() -> int
+{
+	return m_framePosition.load(std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::getLevel() -> float
+{
+	return m_level.load(std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::getAttack() -> float
+{
+	return m_attack.load(std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::getRelease() -> float
+{
+	return m_release.load(std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::getReversed() -> bool
+{
+	return m_reversed.load(std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setFramePosition(int framePosition) -> void
+{
+	m_framePosition.store(framePosition, std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setLevel(float level) -> void
+{
+	m_level.store(level, std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setAttack(float attack) -> void
+{
+	m_attack.store(attack, std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setRelease(float release) -> void
+{
+	return m_release.store(release, std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setReversed(bool reversed) -> void
+{
+	return m_reversed.store(reversed, std::memory_order_relaxed);
+}
+
+auto SampleSlice::Slice::setEnabled(bool enabled) -> void
+{
+	return m_enabled.store(enabled, std::memory_order_relaxed);
 }
