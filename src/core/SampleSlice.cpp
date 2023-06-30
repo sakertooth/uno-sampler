@@ -127,6 +127,11 @@ auto SampleSlice::resetSlice(juce::AudioProcessorValueTreeState& state, int inde
 	setSliceEnabled(state, index, false);
 }
 
+auto SampleSlice::getSample() -> juce::AudioSampleBuffer&
+{
+	return m_sample;
+}
+
 auto SampleSlice::getSliceGroupID(int index) -> std::string
 {
 	return "Slice" + std::to_string(index);

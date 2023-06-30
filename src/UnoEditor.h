@@ -17,6 +17,7 @@ public:
 	void positionSliceSettings();
 	void positionTopBar();
 
+	void selectSample();
 	std::array<juce::Rectangle<int>, 4> getScreenRegions() const;
 
 private:
@@ -28,7 +29,7 @@ private:
 	KnobWithLabel m_sliceAttack = KnobWithLabel("ATTACK");
 	KnobWithLabel m_sliceRelease = KnobWithLabel("RELEASE");
 	juce::TextButton m_playButton = juce::TextButton("PLAY");
-	juce::Label m_sampleNameLabel;
-	juce::TextButton m_loadSampleButton;
+	juce::TextButton m_loadSampleButton = juce::TextButton("LOAD");
+	juce::Label m_sampleNameLabel = juce::Label("", "No sample loaded");
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoEditor)
 };

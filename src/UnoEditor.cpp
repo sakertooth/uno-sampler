@@ -18,6 +18,8 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	m_sampleNameLabel.setEditable(false);
 	m_sampleNameLabel.setJustificationType(juce::Justification::left);
 
+	m_loadSampleButton.onClick = std::bind(&UnoEditor::selectSample, this);
+
 	addAndMakeVisible(m_sliceLevel);
 	addAndMakeVisible(m_sliceAttack);
 	addAndMakeVisible(m_sliceRelease);
@@ -113,6 +115,27 @@ void UnoEditor::positionTopBar()
 
 	m_loadSampleButton.setSize(topBarRegion.proportionOfWidth(0.4f), topBarRegion.getHeight() - margin);
 	m_loadSampleButton.setBounds(topBarRegion.removeFromLeft(m_loadSampleButton.getWidth() + margin).reduced(margin));
+}
+
+void UnoEditor::selectSample()
+{
+	auto fileChooser = std::make_shared<juce::FileChooser>(
+		"Choose sample...", juce::File::getSpecialLocation(juce::File::userHomeDirectory), "*.wav .*ogg *.mp3");
+
+	auto formatManager = std::make_shared<juce::AudioFormatManager>();
+	formatManager->registerBasicFormats();
+
+	fileChooser->launchAsync(juce::FileBrowserComponent::openMode, [this, fileChooser, formatManager](const juce::FileChooser&) {
+		auto sampleFile = fileChooser->getResult();
+		if (sampleFile == juce::File{}) { return; }
+
+		auto reader = std::unique_ptr<juce::AudioFormatReader>{formatManager->createReaderFor(sampleFile)};
+		if (reader.get() == nullptr) { return; }
+
+		auto& buffer = m_processorRef.m_sampleSlice.getSample();
+		buffer.setSize(static_cast<int>(reader->numChannels), static_cast<int>(reader->lengthInSamples));
+		reader->read(&buffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
+	});
 }
 
 std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const

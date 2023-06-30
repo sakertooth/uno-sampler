@@ -30,6 +30,8 @@ public:
 	auto setSliceEnabled(juce::AudioProcessorValueTreeState& state, int index, bool enabled) -> void;
 
 	auto resetSlice(juce::AudioProcessorValueTreeState& state, int index) -> void;
+
+	auto getSample() -> juce::AudioSampleBuffer&;
 private:
 	auto getSliceGroupID(int index) -> std::string;
 	auto getSliceParameterID(int index, const std::string& parameter)
