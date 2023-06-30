@@ -8,93 +8,131 @@ SampleSlice::SampleSlice(const juce::AudioSampleBuffer& buffer)
 {
 }
 
-auto SampleSlice::getSlice(size_t index) -> Slice*
+auto SampleSlice::getNumFramesForSlice(juce::AudioProcessorValueTreeState& state, int index) -> int
 {
-	if (index < 0 || index > m_slices.size()) { return nullptr; }
-	return &m_slices[index];
-}
-
-auto SampleSlice::disableAllSlices() -> void
-{
-	for (auto& slice : m_slices)
+	if (index < 0 || index > MAX_NUM_SLICES - 1)
 	{
-		slice.setEnabled(false);
+		throw std::out_of_range("SampleSlice::getNumFramesForSlice, out of range");
 	}
+
+	if (index == MAX_NUM_SLICES - 1)
+	{
+		const auto slicePosition = getSlicePosition(state, index);
+		return m_sample.getNumSamples() / m_sample.getNumChannels() - static_cast<int>(slicePosition);
+	}
+
+	const auto slicePosition = getSlicePosition(state, index);
+	const auto nextSlicePosition = getSlicePosition(state, index + 1);
+	return static_cast<int>(nextSlicePosition - slicePosition);
 }
 
-auto SampleSlice::getNumFramesForSlice(size_t index) -> int
+std::unique_ptr<juce::AudioProcessorParameterGroup> SampleSlice::addSliceParametersToValueTree(int index)
 {
-	if (index < 0 || index >= m_slices.size()) { throw std::out_of_range("SampleSlice::getNumFramesForSlice: Index of out range"); }
-	if (index == m_slices.size() - 1) { return getNumFramesInBuffer() - getSlice(index)->getFramePosition(); }
-	return getSlice(index + 1)->getFramePosition() - getSlice(index)->getFramePosition();
+	const auto groupID = "Slice" + std::to_string(index);
+
+	auto sliceParameterGroup = std::make_unique<juce::AudioProcessorParameterGroup>(groupID, groupID, "/");
+	sliceParameterGroup->addChild(std::make_unique<juce::AudioParameterInt>(
+		getSliceParameterID(index, "position"), "Position", 0, std::numeric_limits<int>::max(), 0));
+	sliceParameterGroup->addChild(
+		std::make_unique<juce::AudioParameterFloat>(getSliceParameterID(index, "level"), "Level", -12.0f, 12.0f, 0.0f));
+	sliceParameterGroup->addChild(std::make_unique<juce::AudioParameterFloat>(
+		getSliceParameterID(index, "attack"), "Attack", 0.0f, 10000.0f, 0.0f));
+	sliceParameterGroup->addChild(std::make_unique<juce::AudioParameterFloat>(
+		getSliceParameterID(index, "release"), "Release", 0.0f, 10000.0f, 0.0f));
+	sliceParameterGroup->addChild(
+		std::make_unique<juce::AudioParameterBool>(getSliceParameterID(index, "reversed"), "Reversed", false));
+	sliceParameterGroup->addChild(
+		std::make_unique<juce::AudioParameterBool>(getSliceParameterID(index, "enabled"), "Enabled", false));
+
+	return sliceParameterGroup;
 }
 
-auto SampleSlice::getNumFramesInBuffer() const -> int
+auto SampleSlice::getSlicePosition(juce::AudioProcessorValueTreeState& state, int index) -> int
 {
-	return m_sample.getNumSamples() / m_sample.getNumChannels();
+	return static_cast<int>(state.getRawParameterValue(getSliceParameterID(index, "position"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::getSample() const -> const juce::AudioSampleBuffer&
+auto SampleSlice::getSliceLevel(juce::AudioProcessorValueTreeState& state, int index) -> float
 {
-	return m_sample;
+	return static_cast<float>(state.getRawParameterValue(getSliceParameterID(index, "level"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::setSample(const juce::AudioSampleBuffer& sample) -> void
+auto SampleSlice::getSliceAttack(juce::AudioProcessorValueTreeState& state, int index) -> float
 {
-	m_sample = sample;
+	return static_cast<float>(
+		state.getRawParameterValue(getSliceParameterID(index, "attack"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::Slice::getFramePosition() -> int
+auto SampleSlice::getSliceRelease(juce::AudioProcessorValueTreeState& state, int index) -> float
 {
-	return m_framePosition.load(std::memory_order_relaxed);
+	return static_cast<float>(
+		state.getRawParameterValue(getSliceParameterID(index, "release"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::Slice::getLevel() -> float
+auto SampleSlice::getSliceReversed(juce::AudioProcessorValueTreeState& state, int index) -> bool
 {
-	return m_level.load(std::memory_order_relaxed);
+	return static_cast<bool>(
+		state.getRawParameterValue(getSliceParameterID(index, "reversed"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::Slice::getAttack() -> float
+auto SampleSlice::getSliceEnabled(juce::AudioProcessorValueTreeState& state, int index) -> bool
 {
-	return m_attack.load(std::memory_order_relaxed);
+	return static_cast<bool>(
+		state.getRawParameterValue(getSliceParameterID(index, "enabled"))->load(std::memory_order_relaxed));
 }
 
-auto SampleSlice::Slice::getRelease() -> float
+auto SampleSlice::setSlicePosition(juce::AudioProcessorValueTreeState& state, int index, int position) -> void
 {
-	return m_release.load(std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "position"))
+		->store(static_cast<float>(position), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::getReversed() -> bool
+auto SampleSlice::setSliceLevel(juce::AudioProcessorValueTreeState& state, int index, float level) -> void
 {
-	return m_reversed.load(std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "level"))
+		->store(static_cast<float>(level), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::setFramePosition(int framePosition) -> void
+auto SampleSlice::setSliceAttack(juce::AudioProcessorValueTreeState& state, int index, float attack) -> void
 {
-	m_framePosition.store(framePosition, std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "attack"))
+		->store(static_cast<float>(attack), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::setLevel(float level) -> void
+auto SampleSlice::setSliceRelease(juce::AudioProcessorValueTreeState& state, int index, float release) -> void
 {
-	m_level.store(level, std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "release"))
+		->store(static_cast<float>(release), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::setAttack(float attack) -> void
+auto SampleSlice::setSliceReversed(juce::AudioProcessorValueTreeState& state, int index, bool reversed) -> void
 {
-	m_attack.store(attack, std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "reversed"))
+		->store(static_cast<float>(reversed), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::setRelease(float release) -> void
+auto SampleSlice::setSliceEnabled(juce::AudioProcessorValueTreeState& state, int index, bool enabled) -> void
 {
-	return m_release.store(release, std::memory_order_relaxed);
+	state.getRawParameterValue(getSliceParameterID(index, "enabled"))
+		->store(static_cast<float>(enabled), std::memory_order_relaxed);
 }
 
-auto SampleSlice::Slice::setReversed(bool reversed) -> void
+auto SampleSlice::resetSlice(juce::AudioProcessorValueTreeState& state, int index) -> void
 {
-	return m_reversed.store(reversed, std::memory_order_relaxed);
+	setSlicePosition(state, index, 0);
+	setSliceLevel(state, index, 0);
+	setSliceAttack(state, index, 0);
+	setSliceRelease(state, index, 0);
+	setSliceReversed(state, index, false);
+	setSliceEnabled(state, index, false);
 }
 
-auto SampleSlice::Slice::setEnabled(bool enabled) -> void
+auto SampleSlice::getSliceGroupID(int index) -> std::string
 {
-	return m_enabled.store(enabled, std::memory_order_relaxed);
+	return "Slice" + std::to_string(index);
+}
+
+auto SampleSlice::getSliceParameterID(int index, const std::string& parameter) -> std::string
+{
+	return getSliceGroupID(index) + "/" + parameter;
 }

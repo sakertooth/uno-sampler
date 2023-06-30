@@ -3,14 +3,7 @@
 #include "UnoEditor.h"
 
 UnoProcessor::UnoProcessor()
-	: AudioProcessor(BusesProperties()
-#if !JucePlugin_IsMidiEffect
-#if !JucePlugin_IsSynth
-						 .withInput("Input", juce::AudioChannelSet::stereo(), true)
-#endif
-						 .withOutput("Output", juce::AudioChannelSet::stereo(), true)
-#endif
-	)
+	: m_parameterValueTree(*this, nullptr, "Uno Slicer Parameters", createParameterLayout())
 {
 }
 
@@ -158,6 +151,18 @@ bool UnoProcessor::hasEditor() const
 juce::AudioProcessorEditor* UnoProcessor::createEditor()
 {
 	return new UnoEditor(*this);
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout UnoProcessor::createParameterLayout()
+{
+	auto layout = juce::AudioProcessorValueTreeState::ParameterLayout{};
+	for (int i = 0; i < SampleSlice::MAX_NUM_SLICES; ++i)
+	{
+		auto sliceGroup = m_sampleSlice.addSliceParametersToValueTree(i);
+		layout.add(std::move(sliceGroup));
+	}
+
+	return layout;
 }
 
 void UnoProcessor::getStateInformation(juce::MemoryBlock& destData)

@@ -2,6 +2,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "core/SampleSlice.h"
+
 class UnoProcessor : public juce::AudioProcessor
 {
 public:
@@ -17,6 +19,7 @@ public:
 	using AudioProcessor::processBlock;
 
 	juce::AudioProcessorEditor* createEditor() override;
+	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 	bool hasEditor() const override;
 
 	const juce::String getName() const override;
@@ -36,6 +39,10 @@ public:
 	void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+	juce::AudioProcessorValueTreeState m_parameterValueTree;
+	SampleSlice m_sampleSlice;
+	std::array<std::array<std::atomic<float>*, SampleSlice::NUM_PARAMETERS_PER_SLICE>, SampleSlice::MAX_NUM_SLICES>
+		m_parameterValues;
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoProcessor)
 	friend class UnoEditor;
 };

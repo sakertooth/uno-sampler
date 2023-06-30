@@ -8,7 +8,8 @@ target_sources(UnoSampler
     PRIVATE
         src/UnoProcessor.cpp
         src/UnoEditor.cpp
-        src/gui/KnobWithLabel.cpp)
+        src/gui/KnobWithLabel.cpp
+        src/core/SampleSlice.cpp)
 
 target_compile_definitions(UnoSampler
     PUBLIC

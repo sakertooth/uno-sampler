@@ -5,43 +5,34 @@
 
 class SampleSlice
 {
-    class Slice
-    {
-    public:
-        auto getFramePosition() -> int;
-        auto getLevel() -> float;
-        auto getAttack() -> float;
-        auto getRelease() -> float;
-        auto getReversed() -> bool;
+public:
+	static constexpr auto MAX_NUM_SLICES = 32;
+	static constexpr auto NUM_PARAMETERS_PER_SLICE = 6;
 
-        auto setFramePosition(int framePosition) -> void;
-        auto setLevel(float level) -> void;
-        auto setAttack(float attack) -> void;
-        auto setRelease(float release) -> void;
-        auto setReversed(bool reversed) -> void;
-        auto setEnabled(bool enabled) -> void;
+	SampleSlice() = default;
+	explicit SampleSlice(const juce::AudioSampleBuffer& buffer);
 
-    private:
-        std::atomic<int> m_framePosition = 0;
-        std::atomic<float> m_level = 0;
-        std::atomic<float> m_attack = 0;
-        std::atomic<float> m_release = 0;
-        std::atomic<bool> m_reversed = 0;
-        std::atomic<bool> m_enabled = 0;
-    };
+	auto addSliceParametersToValueTree(int index) -> std::unique_ptr<juce::AudioProcessorParameterGroup>;
 
-    static constexpr auto MAX_NUM_SLICES = 32;
+	auto getSlicePosition(juce::AudioProcessorValueTreeState& state, int index) -> int;
+	auto getSliceLevel(juce::AudioProcessorValueTreeState& state, int index) -> float;
+	auto getSliceAttack(juce::AudioProcessorValueTreeState& state, int index) -> float;
+	auto getSliceRelease(juce::AudioProcessorValueTreeState& state, int index) -> float;
+	auto getSliceReversed(juce::AudioProcessorValueTreeState& state, int index) -> bool;
+	auto getSliceEnabled(juce::AudioProcessorValueTreeState& state, int index) -> bool;
+	auto getNumFramesForSlice(juce::AudioProcessorValueTreeState& state, int index) -> int;
 
-    SampleSlice() = default;
-    explicit SampleSlice(const juce::AudioSampleBuffer& buffer);
+	auto setSlicePosition(juce::AudioProcessorValueTreeState& state, int index, int position) -> void;
+	auto setSliceLevel(juce::AudioProcessorValueTreeState& state, int index, float level) -> void;
+	auto setSliceAttack(juce::AudioProcessorValueTreeState& state, int index, float attack) -> void;
+	auto setSliceRelease(juce::AudioProcessorValueTreeState& state, int index, float release) -> void;
+	auto setSliceReversed(juce::AudioProcessorValueTreeState& state, int index, bool reversed) -> void;
+	auto setSliceEnabled(juce::AudioProcessorValueTreeState& state, int index, bool enabled) -> void;
 
-    auto getSlice(size_t index) -> Slice*;
-    auto disableAllSlices() -> void;
-    auto getNumFramesForSlice(size_t index) -> int;
-    auto getNumFramesInBuffer() const -> int;
-    auto getSample() const -> const juce::AudioSampleBuffer&;
-    auto setSample(const juce::AudioSampleBuffer& sample) -> void;
+	auto resetSlice(juce::AudioProcessorValueTreeState& state, int index) -> void;
 private:
+	auto getSliceGroupID(int index) -> std::string;
+	auto getSliceParameterID(int index, const std::string& parameter)
+		-> std::string;
 	juce::AudioSampleBuffer m_sample;
-    std::array<Slice, MAX_NUM_SLICES> m_slices;
 };
