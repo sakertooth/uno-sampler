@@ -3,18 +3,18 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include "UnoProcessor.h"
+#include "gui/BeatPad.h"
 #include "gui/KnobWithLabel.h"
 #include "gui/SliceWaveform.h"
 
 class UnoEditor : public juce::AudioProcessorEditor, private juce::ChangeListener
 {
 public:
-	enum class TransportState
+	enum class PlayState
 	{
 		Stopped,
-		Starting,
 		Playing,
-		Stopping
+		Paused
 	};
 
 	explicit UnoEditor(UnoProcessor&);
@@ -28,15 +28,17 @@ public:
 	void positionTopBar();
 
 	void selectSample();
-	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-	void changeState(UnoEditor::TransportState newState);
+	void onPlayButtonClick();
 
 	std::array<juce::Rectangle<int>, 4> getScreenRegions() const;
+
+	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+	void selectPad(BeatPad::Pad* pad);
 
 private:
 	UnoProcessor& m_processorRef;
 
-	std::array<juce::TextButton, 32> m_sliceButtons;
+	BeatPad m_beatPad;
 	SliceWaveform m_sliceWaveform;
 
 	KnobWithLabel m_sliceLevel = KnobWithLabel("LEVEL");
@@ -46,11 +48,11 @@ private:
 	juce::TextButton m_playButton = juce::TextButton("PLAY");
 	juce::TextButton m_loadSampleButton = juce::TextButton("LOAD");
 	juce::Label m_sampleNameLabel = juce::Label("", "No sample loaded");
+	juce::Label m_selectedPadLabel;
 
 	juce::AudioFormatManager m_formatManager;
 	std::unique_ptr<juce::AudioFormatReaderSource> m_formatReaderSource;
-	juce::AudioTransportSource m_transportSource;
-	TransportState m_transportState;
+	PlayState m_playState = PlayState::Stopped;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoEditor)
 };

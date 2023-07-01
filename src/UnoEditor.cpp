@@ -5,13 +5,16 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	, m_processorRef(p)
 	, m_sliceWaveform(m_formatManager)
 {
-	juce::ignoreUnused(m_processorRef);
-
-	for (size_t i = 0; i < 32; ++i)
-	{
-		m_sliceButtons[i].setButtonText(juce::String{i + 1});
-		addAndMakeVisible(m_sliceButtons[i]);
-	}
+	addAndMakeVisible(m_beatPad);
+	addAndMakeVisible(m_sliceLevel);
+	addAndMakeVisible(m_sliceAttack);
+	addAndMakeVisible(m_sliceRelease);
+	addAndMakeVisible(m_sliceWaveform);
+	addAndMakeVisible(m_sampleNameLabel);
+	addAndMakeVisible(m_selectedPadLabel);
+	addAndMakeVisible(m_playButton);
+	addAndMakeVisible(m_loadSampleButton);
+	setSize(820, 560);
 
 	m_sampleNameLabel.setColour(juce::Label::ColourIds::backgroundColourId, juce::Colour{34, 34, 34});
 	m_sampleNameLabel.setColour(juce::Label::ColourIds::outlineColourId, juce::Colours::whitesmoke);
@@ -19,20 +22,18 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	m_sampleNameLabel.setEditable(false);
 	m_sampleNameLabel.setJustificationType(juce::Justification::left);
 
-	m_formatManager.registerBasicFormats();
-	m_transportSource.addChangeListener(this);
-	m_sliceWaveform.thumbnail().addChangeListener(this);
-	m_playButton.setEnabled(false);
-	m_loadSampleButton.onClick = [this] { selectSample(); };
+	m_selectedPadLabel.setFont(juce::Font{24.0f, juce::Font::bold});
+	m_selectedPadLabel.setJustificationType(juce::Justification::centred);
+	m_selectedPadLabel.setEditable(false);
 
-	addAndMakeVisible(m_sliceLevel);
-	addAndMakeVisible(m_sliceAttack);
-	addAndMakeVisible(m_sliceRelease);
-	addAndMakeVisible(m_sliceWaveform);
-	addAndMakeVisible(m_sampleNameLabel);
-	addAndMakeVisible(m_playButton);
-	addAndMakeVisible(m_loadSampleButton);
-	setSize(820, 560);
+	m_formatManager.registerBasicFormats();
+
+	m_sliceWaveform.thumbnail().addChangeListener(this);
+
+	m_playButton.setEnabled(false);
+	m_playButton.onClick = [this] { onPlayButtonClick(); };
+
+	m_loadSampleButton.onClick = [this] { selectSample(); };
 }
 
 void UnoEditor::paint(juce::Graphics& g)
@@ -41,13 +42,22 @@ void UnoEditor::paint(juce::Graphics& g)
 	g.setColour(juce::Colour{34, 34, 34});
 	g.fillRect(sliceButtonsRegion);
 
+	g.setColour(juce::Colours::black);
+    g.drawRoundedRectangle(sliceButtonsRegion.toFloat(), 1.0f, 1.0f);
+
 	g.setColour(juce::Colour{51, 51, 51});
 	g.fillRect(sliceSettingsRegion);
+
+	g.setColour(juce::Colours::black);
+	g.drawRoundedRectangle(sliceSettingsRegion.toFloat(), 1.0f, 1.0f);
 
 	m_sliceWaveform.paint(g);
 
 	g.setColour(juce::Colour{51, 51, 51});
 	g.fillRect(topBarRegion);
+
+	g.setColour(juce::Colours::black);
+	g.drawRoundedRectangle(topBarRegion.toFloat(), 1.0f, 1.0f);
 }
 
 void UnoEditor::resized()
@@ -61,24 +71,7 @@ void UnoEditor::resized()
 void UnoEditor::positionSliceButtons()
 {
 	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
-	const auto numRows = 2;
-	const auto regionMargin = 10;
-	const auto sliceButtonSize = std::array<int, 2>{40, 32};
-	const auto numButtonsPerRow = static_cast<int>(m_sliceButtons.size() / numRows);
-	const auto rowOne = sliceButtonsRegion.removeFromTop(sliceButtonsRegion.getHeight() / 2);
-	const auto rowTwo = sliceButtonsRegion.removeFromTop(sliceButtonsRegion.getHeight() / 2);
-
-	for (auto row = 0; row < numRows; ++row)
-	{
-		auto rowRegion = row == 0 ? rowOne : rowTwo;
-		auto spacing = rowRegion.getWidth() / numButtonsPerRow;
-		for (auto button = 0; button < numButtonsPerRow; ++button)
-		{
-			auto buttonRect = rowRegion.removeFromLeft(spacing).reduced(regionMargin);
-			buttonRect.setSize(sliceButtonSize[0], sliceButtonSize[1]);
-			m_sliceButtons[static_cast<size_t>(row * numButtonsPerRow + button)].setBounds(buttonRect);
-		}
-	}
+	m_beatPad.setBounds(sliceButtonsRegion);
 }
 
 void UnoEditor::positionSliceSettings()
@@ -86,12 +79,13 @@ void UnoEditor::positionSliceSettings()
 	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
 	const auto width = sliceSettingsRegion.getWidth();
 	const auto numControlsGroup1 = 3;
-	const auto spacingGroup1 = width / 2 / numControlsGroup1;
+	const auto spacing = width / 2 / numControlsGroup1;
 	const auto margin = 2;
 
-	m_sliceLevel.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
-	m_sliceAttack.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
-	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
+	m_sliceLevel.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
+	m_sliceAttack.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
+	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
+	m_selectedPadLabel.setBounds(sliceSettingsRegion.removeFromRight(spacing).reduced(margin));
 }
 
 void UnoEditor::positionWaveform()
@@ -124,48 +118,35 @@ void UnoEditor::selectSample()
 		auto sampleFile = fileChooser->getResult();
 		if (sampleFile == juce::File{}) { return; }
 
-		auto reader = m_formatManager.createReaderFor(sampleFile);
+		auto reader = std::unique_ptr<juce::AudioFormatReader>(m_formatManager.createReaderFor(sampleFile));
 		if (reader == nullptr) { return; }
 
 		auto& buffer = m_processorRef.m_sampleSlice.getSample();
 		buffer.setSize(static_cast<int>(reader->numChannels), static_cast<int>(reader->lengthInSamples));
 		reader->read(&buffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
 
-		auto newSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-		m_transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
 		m_sliceWaveform.thumbnail().setSource(new juce::FileInputSource{sampleFile});
 		m_playButton.setEnabled(true);
-		m_formatReaderSource.reset(newSource.release());
+		m_sampleNameLabel.setText(sampleFile.getFileNameWithoutExtension(), juce::dontSendNotification);
 	});
 }
 
-void UnoEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
+void UnoEditor::onPlayButtonClick()
 {
-	if (source == &m_transportSource)
+	if (!m_playButton.isEnabled()) { return; }
+	switch (m_playState)
 	{
-		changeState(m_transportSource.isPlaying() ? TransportState::Playing : TransportState::Stopped);
-	}
-	else if (source == &m_sliceWaveform.thumbnail())
-	{
-		m_sliceWaveform.thumbnailChanged();
-	}
-}
-
-void UnoEditor::changeState(UnoEditor::TransportState newState)
-{
-	if (m_transportState == newState) { return; }
-	switch (newState)
-	{
-	case TransportState::Starting:
-		m_transportSource.start();
+	case PlayState::Stopped:
+		m_playState = PlayState::Playing;
+		m_playButton.setButtonText("PAUSE");
 		break;
-	case TransportState::Playing:
-		m_transportSource.start();
+	case PlayState::Playing:
+		m_playState = PlayState::Paused;
+		m_playButton.setButtonText("PLAY");
 		break;
-	case TransportState::Stopping:
-		m_transportSource.stop();
-		break;
-	case TransportState::Stopped:
+	case PlayState::Paused:
+		m_playState = PlayState::Playing;
+		m_playButton.setButtonText("PAUSE");
 		break;
 	default:
 		break;
@@ -182,4 +163,16 @@ std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
 	auto sampleWaveformRegion = area.removeFromBottom(2 * windowHeight / 5 + 50);
 	auto topBarRegion = area;
 	return {sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion};
+}
+
+void UnoEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+	if (source == &m_sliceWaveform.thumbnail()) { m_sliceWaveform.thumbnailChanged(); }
+}
+
+void UnoEditor::selectPad(BeatPad::Pad* pad)
+{
+	auto selectedSlice = m_beatPad.findSlice(pad);
+	if (!selectedSlice.has_value()) { return; }
+	m_selectedPadLabel.setText("Pad " + std::to_string(*selectedSlice + 1), juce::dontSendNotification);
 }
