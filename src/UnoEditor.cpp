@@ -85,7 +85,6 @@ void UnoEditor::positionSliceSettings()
 	m_sliceLevel.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
 	m_sliceAttack.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
 	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
-	m_selectedPadLabel.setBounds(sliceSettingsRegion.removeFromRight(spacing).reduced(margin));
 }
 
 void UnoEditor::positionWaveform()
@@ -107,6 +106,7 @@ void UnoEditor::positionTopBar()
 
 	m_loadSampleButton.setSize(topBarRegion.proportionOfWidth(0.4f), topBarRegion.getHeight() - margin);
 	m_loadSampleButton.setBounds(topBarRegion.removeFromLeft(m_loadSampleButton.getWidth() + margin).reduced(margin));
+	m_selectedPadLabel.setBounds(topBarRegion.removeFromRight(m_sampleNameLabel.getWidth() + margin).reduced(margin));
 }
 
 void UnoEditor::selectSample()
