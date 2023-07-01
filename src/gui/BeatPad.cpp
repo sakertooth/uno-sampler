@@ -1,12 +1,21 @@
 #include "BeatPad.h"
 
+#include "../UnoEditor.h"
+
 BeatPad::BeatPad()
 {
 	for (int i = 0; i < static_cast<int>(m_beatPad.size()); ++i)
 	{
 		auto& pad = m_beatPad[static_cast<size_t>(i)];
-		pad->setComponentID("BeatPad" + std::to_string(i));
 		addAndMakeVisible(pad);
+		pad.setComponentID("BeatPad::Pad" + std::to_string(i));
+		pad.button().onStateChange = [this, &pad] {
+			if (pad.button().isDown())
+			{
+				auto main = dynamic_cast<UnoEditor*>(getParentComponent());
+				main->selectPad(&pad);
+			}
+		};
 	}
 }
 
@@ -31,10 +40,10 @@ void BeatPad::resized()
 	}
 }
 
-auto BeatPad::getSelectedSlice() -> std::optional<int>
+auto BeatPad::findSlice(BeatPad::Pad* pad) -> std::optional<int>
 {
-	if (m_selectedPad == nullptr) { return std::nullopt; }
-	auto it = std::find(m_beatPad.begin(), m_beatPad.end(), *m_selectedPad);
+	if (pad == nullptr) { return std::nullopt; }
+	auto it = std::find(m_beatPad.begin(), m_beatPad.end(), *pad);
 	if (it == m_beatPad.end()) { return std::nullopt; }
 	return std::distance(m_beatPad.begin(), it);
 }
@@ -47,19 +56,12 @@ BeatPad::Pad::Pad()
 
 	auto path = juce::Path{};
 	path.addRoundedRectangle(getLocalBounds(), 2.0f);
-
 	m_button.setShape(path, true, true, true);
-	m_button.onClick = [this] { dynamic_cast<BeatPad*>(getParentComponent())->m_selectedPad = this; };
 }
 
-juce::ShapeButton& BeatPad::Pad::operator*() noexcept
+auto BeatPad::Pad::button() -> juce::ShapeButton&
 {
 	return m_button;
-}
-
-juce::ShapeButton* BeatPad::Pad::operator->() noexcept
-{
-	return &m_button;
 }
 
 auto BeatPad::Pad::operator==(const Pad& other) -> bool
