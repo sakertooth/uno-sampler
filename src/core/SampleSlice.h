@@ -12,7 +12,10 @@ public:
 	SampleSlice() = default;
 	explicit SampleSlice(const juce::AudioSampleBuffer& buffer);
 
+	auto addSlice(juce::AudioProcessorValueTreeState& state, int index) -> void;
 	auto addSliceParametersToValueTree(int index) -> std::unique_ptr<juce::AudioProcessorParameterGroup>;
+
+	auto removeSlice(juce::AudioProcessorValueTreeState& state, int index) -> void;
 
 	auto getSlicePosition(juce::AudioProcessorValueTreeState& state, int index) -> int;
 	auto getSliceLevel(juce::AudioProcessorValueTreeState& state, int index) -> float;
@@ -30,6 +33,7 @@ public:
 	auto setSliceEnabled(juce::AudioProcessorValueTreeState& state, int index, bool enabled) -> void;
 
 	auto resetSlice(juce::AudioProcessorValueTreeState& state, int index) -> void;
+	auto countEnabledSlices(juce::AudioProcessorValueTreeState& state) -> int;
 
 	auto getSample() -> juce::AudioSampleBuffer&;
 private:

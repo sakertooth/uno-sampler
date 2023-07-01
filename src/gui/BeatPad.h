@@ -30,9 +30,16 @@ public:
     };
 
     BeatPad();
-    auto findSlice(BeatPad::Pad* pad) -> std::optional<int>;
     auto resized() -> void override;
+
+    auto getPad(int index) -> Pad*;
+    auto getIndexOfPad(BeatPad::Pad* pad) -> std::optional<int>;
+    auto getSelectedPad() -> Pad*;
+    auto setSelectedPad(int index) -> void;
+    auto setSelectedPad(Pad* pad) -> void;
+
 private:
-    std::array<Pad, SampleSlice::MAX_NUM_SLICES> m_beatPad;
+    std::array<Pad, SampleSlice::MAX_NUM_SLICES> m_pads;
+    Pad* m_selectedPad = nullptr;
     friend class Pad;
 };

@@ -141,3 +141,31 @@ auto SampleSlice::getSliceParameterID(int index, const std::string& parameter) -
 {
 	return getSliceGroupID(index) + "/" + parameter;
 }
+
+auto SampleSlice::addSlice(juce::AudioProcessorValueTreeState& state, int index) -> void
+{
+	if (index < 0 || index > MAX_NUM_SLICES - 1) { return; }
+	if (getSliceEnabled(state, index)) { return; }
+
+	const auto numAudioSections = countEnabledSlices(state) + 2;
+	const auto numFrames = m_sample.getNumSamples() / m_sample.getNumChannels();
+	const auto newFramePosition = (index + 1) * numFrames / numAudioSections;
+
+	setSliceEnabled(state, index, true);
+	setSlicePosition(state, index, newFramePosition);
+}
+
+auto SampleSlice::removeSlice(juce::AudioProcessorValueTreeState& state, int index) -> void
+{
+	setSliceEnabled(state, index, false);
+}
+
+auto SampleSlice::countEnabledSlices(juce::AudioProcessorValueTreeState& state) -> int
+{
+	auto count = 0;
+	for (int i = 0; i < MAX_NUM_SLICES; ++i)
+	{
+		if (getSliceEnabled(state, i)) { ++count; }
+	}
+	return count;
+}

@@ -29,6 +29,8 @@ public:
 
 	void selectSample();
 	void onPlayButtonClick();
+	void onAddButtonClick();
+	void onRemoveButtonClick();
 
 	std::array<juce::Rectangle<int>, 4> getScreenRegions() const;
 
@@ -47,6 +49,8 @@ private:
 
 	juce::TextButton m_playButton = juce::TextButton("PLAY");
 	juce::TextButton m_loadSampleButton = juce::TextButton("LOAD");
+	juce::TextButton m_addSliceButton = juce::TextButton{"ADD"};
+	juce::TextButton m_removeSliceButton = juce::TextButton{"REMOVE"};
 	juce::Label m_sampleNameLabel = juce::Label("", "No sample loaded");
 	juce::Label m_selectedPadLabel;
 

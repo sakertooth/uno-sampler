@@ -4,9 +4,9 @@
 
 BeatPad::BeatPad()
 {
-	for (int i = 0; i < static_cast<int>(m_beatPad.size()); ++i)
+	for (int i = 0; i < static_cast<int>(m_pads.size()); ++i)
 	{
-		auto& pad = m_beatPad[static_cast<size_t>(i)];
+		auto& pad = m_pads[static_cast<size_t>(i)];
 		addAndMakeVisible(pad);
 		pad.setComponentID("BeatPad::Pad" + std::to_string(i));
 		pad.getButton().onStateChange = [this, &pad] {
@@ -14,6 +14,7 @@ BeatPad::BeatPad()
 			{
 				auto main = dynamic_cast<UnoEditor*>(getParentComponent());
 				main->selectPad(&pad);
+				m_selectedPad = &pad;
 			}
 		};
 	}
@@ -26,26 +27,45 @@ void BeatPad::resized()
 
 	auto rowOneRegion = area.removeFromTop(areaHeight / 2);
 	auto rowTwoRegion = area.removeFromTop(areaHeight / 2);
-	auto spacing = rowOneRegion.getWidth() / static_cast<int>(m_beatPad.size() / 2);
+	auto spacing = rowOneRegion.getWidth() / static_cast<int>(m_pads.size() / 2);
 	auto margin = 5;
 
 	for (size_t row = 0; row < 2; ++row)
 	{
 		auto& rowRegion = row == 0 ? rowOneRegion : rowTwoRegion;
-		for (size_t buttonIndex = 0; buttonIndex < m_beatPad.size() / 2; ++buttonIndex)
+		for (size_t buttonIndex = 0; buttonIndex < m_pads.size() / 2; ++buttonIndex)
 		{
-			const size_t index = row * m_beatPad.size() / 2 + buttonIndex;
-			m_beatPad[index].setBounds(rowRegion.removeFromLeft(spacing).reduced(margin));
+			const size_t index = row * m_pads.size() / 2 + buttonIndex;
+			m_pads[index].setBounds(rowRegion.removeFromLeft(spacing).reduced(margin));
 		}
 	}
 }
 
-auto BeatPad::findSlice(BeatPad::Pad* pad) -> std::optional<int>
+auto BeatPad::getPad(int index) -> Pad*
 {
-	if (pad == nullptr) { return std::nullopt; }
-	auto it = std::find(m_beatPad.begin(), m_beatPad.end(), *pad);
-	if (it == m_beatPad.end()) { return std::nullopt; }
-	return std::distance(m_beatPad.begin(), it);
+	return m_pads.begin() + index;
+}
+
+auto BeatPad::getIndexOfPad(BeatPad::Pad* pad) -> std::optional<int>
+{
+	auto it = std::find(m_pads.begin(), m_pads.end(), *pad);
+	if (it == m_pads.end()) { return std::nullopt; }
+	return std::distance(m_pads.begin(), it);
+}
+
+auto BeatPad::getSelectedPad() -> Pad*
+{
+	return m_selectedPad;
+}
+
+auto BeatPad::setSelectedPad(int index) -> void
+{
+	m_selectedPad = getPad(index);
+}
+
+auto BeatPad::setSelectedPad(Pad* pad) -> void
+{
+	m_selectedPad = pad;
 }
 
 BeatPad::Pad::Pad()
@@ -83,18 +103,18 @@ auto BeatPad::Pad::setState(State state) -> void
 {
 	switch (state)
 	{
-	case State::Empty:
-	{
+	case State::Empty: {
 		if (m_state == State::Empty) return;
 		const auto color = juce::Colours::white;
 		m_button.setColours(color, color.darker(), color.darker(0.6f));
+		m_button.repaint();
 		break;
 	}
-	case State::Filled:
-	{
+	case State::Filled: {
 		if (m_state == State::Filled) return;
 		const auto color = juce::Colours::cyan;
 		m_button.setColours(color, color.darker(), color.darker(0.6f));
+		m_button.repaint();
 		break;
 	}
 	default:

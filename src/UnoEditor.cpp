@@ -13,6 +13,8 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	addAndMakeVisible(m_sampleNameLabel);
 	addAndMakeVisible(m_selectedPadLabel);
 	addAndMakeVisible(m_playButton);
+	addAndMakeVisible(m_addSliceButton);
+	addAndMakeVisible(m_removeSliceButton);
 	addAndMakeVisible(m_loadSampleButton);
 	setSize(820, 560);
 
@@ -27,13 +29,16 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	m_selectedPadLabel.setEditable(false);
 
 	m_formatManager.registerBasicFormats();
-
 	m_sliceWaveform.thumbnail().addChangeListener(this);
 
 	m_playButton.setEnabled(false);
-	m_playButton.onClick = [this] { onPlayButtonClick(); };
+	m_addSliceButton.setEnabled(false);
+	m_removeSliceButton.setEnabled(false);
 
+	m_playButton.onClick = [this] { onPlayButtonClick(); };
 	m_loadSampleButton.onClick = [this] { selectSample(); };
+	m_addSliceButton.onClick = [this] { onAddButtonClick(); };
+	m_removeSliceButton.onClick = [this] { onRemoveButtonClick(); };
 }
 
 void UnoEditor::paint(juce::Graphics& g)
@@ -43,7 +48,7 @@ void UnoEditor::paint(juce::Graphics& g)
 	g.fillRect(sliceButtonsRegion);
 
 	g.setColour(juce::Colours::black);
-    g.drawRoundedRectangle(sliceButtonsRegion.toFloat(), 1.0f, 1.0f);
+	g.drawRoundedRectangle(sliceButtonsRegion.toFloat(), 1.0f, 1.0f);
 
 	g.setColour(juce::Colour{51, 51, 51});
 	g.fillRect(sliceSettingsRegion);
@@ -85,6 +90,12 @@ void UnoEditor::positionSliceSettings()
 	m_sliceLevel.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
 	m_sliceAttack.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
 	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacing).reduced(margin));
+
+	auto addRemoveSliceRegion = sliceSettingsRegion.removeFromRight(spacing).reduced(margin);
+	auto addRemoveSliceRegionHeight = addRemoveSliceRegion.getHeight();
+
+	m_addSliceButton.setBounds(addRemoveSliceRegion.removeFromTop(addRemoveSliceRegionHeight / 2).reduced(margin));
+	m_removeSliceButton.setBounds(addRemoveSliceRegion.removeFromTop(addRemoveSliceRegionHeight / 2).reduced(margin));
 }
 
 void UnoEditor::positionWaveform()
@@ -126,8 +137,10 @@ void UnoEditor::selectSample()
 		reader->read(&buffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
 
 		m_sliceWaveform.thumbnail().setSource(new juce::FileInputSource{sampleFile});
-		m_playButton.setEnabled(true);
 		m_sampleNameLabel.setText(sampleFile.getFileNameWithoutExtension(), juce::dontSendNotification);
+		m_playButton.setEnabled(true);
+		m_addSliceButton.setEnabled(true);
+		m_removeSliceButton.setEnabled(true);
 	});
 }
 
@@ -153,6 +166,42 @@ void UnoEditor::onPlayButtonClick()
 	}
 }
 
+void UnoEditor::onAddButtonClick()
+{
+	BeatPad::Pad* firstEmptyPad = nullptr;
+	auto index = 0;
+
+	for (; index < SampleSlice::MAX_NUM_SLICES; ++index)
+	{
+		firstEmptyPad = m_beatPad.getPad(index);
+		if (firstEmptyPad->getState() == BeatPad::Pad::State::Empty)
+			break;
+	}
+
+	if (firstEmptyPad == nullptr) { return; }
+	m_processorRef.m_sampleSlice.addSlice(m_processorRef.m_parameterValueTree, index);
+	firstEmptyPad->setState(BeatPad::Pad::State::Filled);
+	selectPad(firstEmptyPad);
+}
+
+void UnoEditor::onRemoveButtonClick()
+{
+	BeatPad::Pad* lastFilledPad = nullptr;
+	auto index = SampleSlice::MAX_NUM_SLICES - 1;
+
+	for (; index >= 0; --index)
+	{
+		lastFilledPad = m_beatPad.getPad(index);
+		if (lastFilledPad->getState() == BeatPad::Pad::State::Filled)
+			break;
+	}
+
+	if (lastFilledPad == nullptr) { return; }
+	m_processorRef.m_sampleSlice.addSlice(m_processorRef.m_parameterValueTree, index);
+	lastFilledPad->setState(BeatPad::Pad::State::Empty);
+	selectPad(lastFilledPad);
+}
+
 std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
 {
 	auto area = getLocalBounds();
@@ -172,7 +221,8 @@ void UnoEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
 
 void UnoEditor::selectPad(BeatPad::Pad* pad)
 {
-	auto selectedSlice = m_beatPad.findSlice(pad);
+	auto selectedSlice = m_beatPad.getIndexOfPad(pad);
 	if (!selectedSlice.has_value()) { return; }
 	m_selectedPadLabel.setText("Pad " + std::to_string(*selectedSlice + 1), juce::dontSendNotification);
+	m_beatPad.setSelectedPad(pad);
 }
