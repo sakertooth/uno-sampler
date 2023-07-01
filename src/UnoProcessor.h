@@ -8,7 +8,6 @@ class UnoProcessor : public juce::AudioProcessor
 {
 public:
 	UnoProcessor();
-	~UnoProcessor() override;
 
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
@@ -41,8 +40,6 @@ public:
 private:
 	juce::AudioProcessorValueTreeState m_parameterValueTree;
 	SampleSlice m_sampleSlice;
-	std::array<std::array<std::atomic<float>*, SampleSlice::NUM_PARAMETERS_PER_SLICE>, SampleSlice::MAX_NUM_SLICES>
-		m_parameterValues;
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoProcessor)
 	friend class UnoEditor;
 };
