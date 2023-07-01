@@ -50,6 +50,7 @@ void UnoProcessor::setCurrentProgram([[maybe_unused]] int index)
 
 const juce::String UnoProcessor::getProgramName([[maybe_unused]] int index)
 {
+	return "";
 }
 
 void UnoProcessor::changeProgramName([[maybe_unused]] int index, [[maybe_unused]] const juce::String& newName)
