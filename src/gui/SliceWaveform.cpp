@@ -17,7 +17,8 @@ void SliceWaveform::paint(juce::Graphics& g)
 	if (m_thumbnail.getNumChannels() == 0)
 	{
 		g.setColour(juce::Colours::white);
-		g.drawFittedText("No File Loaded", getLocalBounds(), juce::Justification::centred, 1);
+		g.setFont(juce::Font{36.0f, juce::Font::bold});
+		g.drawFittedText("No sample loaded", getLocalBounds(), juce::Justification::centred, 1);
 	}
 	else
 	{
