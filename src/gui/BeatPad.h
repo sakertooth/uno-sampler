@@ -8,12 +8,24 @@ public:
     class Pad : public juce::Component
     {
     public:
+        enum class State
+        {
+            Empty,
+            Filled
+        };
+
         Pad();
-        auto button() -> juce::ShapeButton&;
+
         auto operator==(const Pad& other) -> bool;
         auto operator!=(const Pad& other) -> bool;
+
+        auto getButton() -> juce::ShapeButton&;
+        auto getState() -> State;
+
+        auto setState(State state) -> void;
     private:
         juce::ShapeButton m_button;
+        State m_state = State::Empty;
         friend class BeatPad;
     };
 

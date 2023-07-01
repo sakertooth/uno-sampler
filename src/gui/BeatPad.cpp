@@ -9,8 +9,8 @@ BeatPad::BeatPad()
 		auto& pad = m_beatPad[static_cast<size_t>(i)];
 		addAndMakeVisible(pad);
 		pad.setComponentID("BeatPad::Pad" + std::to_string(i));
-		pad.button().onStateChange = [this, &pad] {
-			if (pad.button().isDown())
+		pad.getButton().onStateChange = [this, &pad] {
+			if (pad.getButton().isDown())
 			{
 				auto main = dynamic_cast<UnoEditor*>(getParentComponent());
 				main->selectPad(&pad);
@@ -59,7 +59,7 @@ BeatPad::Pad::Pad()
 	m_button.setShape(path, true, true, true);
 }
 
-auto BeatPad::Pad::button() -> juce::ShapeButton&
+auto BeatPad::Pad::getButton() -> juce::ShapeButton&
 {
 	return m_button;
 }
@@ -72,4 +72,34 @@ auto BeatPad::Pad::operator==(const Pad& other) -> bool
 auto BeatPad::Pad::operator!=(const Pad& other) -> bool
 {
 	return !(*this == other);
+}
+
+auto BeatPad::Pad::getState() -> State
+{
+	return m_state;
+}
+
+auto BeatPad::Pad::setState(State state) -> void
+{
+	switch (state)
+	{
+	case State::Empty:
+	{
+		if (m_state == State::Empty) return;
+		const auto color = juce::Colours::white;
+		m_button.setColours(color, color.darker(), color.darker(0.6f));
+		break;
+	}
+	case State::Filled:
+	{
+		if (m_state == State::Filled) return;
+		const auto color = juce::Colours::cyan;
+		m_button.setColours(color, color.darker(), color.darker(0.6f));
+		break;
+	}
+	default:
+		break;
+	}
+
+	m_state = state;
 }
