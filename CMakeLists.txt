@@ -8,6 +8,7 @@ target_sources(UnoSampler
     PRIVATE
         src/UnoProcessor.cpp
         src/UnoEditor.cpp
+        src/gui/BeatPad.cpp
         src/gui/KnobWithLabel.cpp
         src/gui/SliceWaveform.cpp
         src/core/SampleSlice.cpp)
