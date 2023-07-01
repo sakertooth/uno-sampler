@@ -3,6 +3,7 @@
 UnoEditor::UnoEditor(UnoProcessor& p)
 	: AudioProcessorEditor(&p)
 	, m_processorRef(p)
+	, m_sliceWaveform(m_formatManager)
 {
 	juce::ignoreUnused(m_processorRef);
 
@@ -18,11 +19,16 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	m_sampleNameLabel.setEditable(false);
 	m_sampleNameLabel.setJustificationType(juce::Justification::left);
 
-	m_loadSampleButton.onClick = std::bind(&UnoEditor::selectSample, this);
+	m_formatManager.registerBasicFormats();
+	m_transportSource.addChangeListener(this);
+	m_sliceWaveform.thumbnail().addChangeListener(this);
+	m_playButton.setEnabled(false);
+	m_loadSampleButton.onClick = [this] { selectSample(); };
 
 	addAndMakeVisible(m_sliceLevel);
 	addAndMakeVisible(m_sliceAttack);
 	addAndMakeVisible(m_sliceRelease);
+	addAndMakeVisible(m_sliceWaveform);
 	addAndMakeVisible(m_sampleNameLabel);
 	addAndMakeVisible(m_playButton);
 	addAndMakeVisible(m_loadSampleButton);
@@ -38,31 +44,17 @@ void UnoEditor::paint(juce::Graphics& g)
 	g.setColour(juce::Colour{51, 51, 51});
 	g.fillRect(sliceSettingsRegion);
 
-	g.setColour(juce::Colours::black);
-	g.fillRect(sampleWaveformRegion);
+	m_sliceWaveform.paint(g);
 
 	g.setColour(juce::Colour{51, 51, 51});
 	g.fillRect(topBarRegion);
-
-	g.setColour(juce::Colours::black);
-	if (m_sampleWaveform.get() == nullptr || m_sampleWaveform->getNumChannels() == 0)
-	{
-		g.fillRect(sampleWaveformRegion);
-		g.setColour(juce::Colours::white);
-		g.drawFittedText("No File Loaded", sampleWaveformRegion, juce::Justification::centred, 1);
-	}
-	else
-	{
-		g.fillRect(sampleWaveformRegion);
-		g.setColour(juce::Colours::darkblue);
-		m_sampleWaveform->drawChannels(g, sampleWaveformRegion, 0.0, m_sampleWaveform->getTotalLength(), 1.0f);
-	}
 }
 
 void UnoEditor::resized()
 {
 	positionSliceButtons();
 	positionSliceSettings();
+	positionWaveform();
 	positionTopBar();
 }
 
@@ -102,6 +94,12 @@ void UnoEditor::positionSliceSettings()
 	m_sliceRelease.setBounds(sliceSettingsRegion.removeFromLeft(spacingGroup1).reduced(margin));
 }
 
+void UnoEditor::positionWaveform()
+{
+	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
+	m_sliceWaveform.setBounds(sampleWaveformRegion);
+}
+
 void UnoEditor::positionTopBar()
 {
 	auto [sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion] = getScreenRegions();
@@ -122,28 +120,66 @@ void UnoEditor::selectSample()
 	auto fileChooser = std::make_shared<juce::FileChooser>(
 		"Choose sample...", juce::File::getSpecialLocation(juce::File::userHomeDirectory), "*.wav .*ogg *.mp3");
 
-	auto formatManager = std::make_shared<juce::AudioFormatManager>();
-	formatManager->registerBasicFormats();
-
-	fileChooser->launchAsync(juce::FileBrowserComponent::openMode, [this, fileChooser, formatManager](const juce::FileChooser&) {
+	fileChooser->launchAsync(juce::FileBrowserComponent::openMode, [this, fileChooser](const juce::FileChooser&) {
 		auto sampleFile = fileChooser->getResult();
 		if (sampleFile == juce::File{}) { return; }
 
-		auto reader = std::unique_ptr<juce::AudioFormatReader>{formatManager->createReaderFor(sampleFile)};
-		if (reader.get() == nullptr) { return; }
+		auto reader = m_formatManager.createReaderFor(sampleFile);
+		if (reader == nullptr) { return; }
 
 		auto& buffer = m_processorRef.m_sampleSlice.getSample();
 		buffer.setSize(static_cast<int>(reader->numChannels), static_cast<int>(reader->lengthInSamples));
 		reader->read(&buffer, 0, static_cast<int>(reader->lengthInSamples), 0, true, true);
+
+		auto newSource = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+		m_transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
+		m_sliceWaveform.thumbnail().setSource(new juce::FileInputSource{sampleFile});
+		m_playButton.setEnabled(true);
+		m_formatReaderSource.reset(newSource.release());
 	});
+}
+
+void UnoEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+	if (source == &m_transportSource)
+	{
+		changeState(m_transportSource.isPlaying() ? TransportState::Playing : TransportState::Stopped);
+	}
+	else if (source == &m_sliceWaveform.thumbnail())
+	{
+		m_sliceWaveform.thumbnailChanged();
+	}
+}
+
+void UnoEditor::changeState(UnoEditor::TransportState newState)
+{
+	if (m_transportState == newState) { return; }
+	switch (newState)
+	{
+	case TransportState::Starting:
+		m_transportSource.start();
+		break;
+	case TransportState::Playing:
+		m_transportSource.start();
+		break;
+	case TransportState::Stopping:
+		m_transportSource.stop();
+		break;
+	case TransportState::Stopped:
+		break;
+	default:
+		break;
+	}
 }
 
 std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
 {
 	auto area = getLocalBounds();
-	auto sliceButtonsRegion = area.removeFromBottom(area.getHeight() / 5);
-	auto sliceSettingsRegion = area.removeFromBottom(area.getHeight() / 5);
-	auto sampleWaveformRegion = area.removeFromBottom(area.getHeight() - 50);
-	auto topBarRegion = area.removeFromTop(50);
+	const auto windowHeight = area.getHeight();
+
+	auto sliceButtonsRegion = area.removeFromBottom(windowHeight / 5);
+	auto sliceSettingsRegion = area.removeFromBottom(windowHeight / 5);
+	auto sampleWaveformRegion = area.removeFromBottom(2 * windowHeight / 5 + 50);
+	auto topBarRegion = area;
 	return {sliceButtonsRegion, sliceSettingsRegion, sampleWaveformRegion, topBarRegion};
 }

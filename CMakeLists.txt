@@ -9,6 +9,7 @@ target_sources(UnoSampler
         src/UnoProcessor.cpp
         src/UnoEditor.cpp
         src/gui/KnobWithLabel.cpp
+        src/gui/SliceWaveform.cpp
         src/core/SampleSlice.cpp)
 
 target_compile_definitions(UnoSampler
