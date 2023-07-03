@@ -10,11 +10,17 @@ BeatPad::BeatPad()
 		addAndMakeVisible(pad);
 		pad.setComponentID("BeatPad::Pad" + std::to_string(i));
 		pad.getButton().onStateChange = [this, &pad] {
-			if (pad.getButton().isDown())
+			auto main = dynamic_cast<UnoEditor*>(getParentComponent());
+			if (pad.getButton().isDown() && !pad.m_pressed)
 			{
-				auto main = dynamic_cast<UnoEditor*>(getParentComponent());
-				main->selectPad(&pad);
+				main->padPressed(&pad);
 				m_selectedPad = &pad;
+				pad.m_pressed = true;
+			}
+			else if (!pad.getButton().isDown() && pad.m_pressed)
+			{
+				main->padUnpressed(&pad);
+				pad.m_pressed = false;
 			}
 		};
 	}
@@ -122,4 +128,14 @@ auto BeatPad::Pad::setState(State state) -> void
 	}
 
 	m_state = state;
+}
+
+auto BeatPad::Pad::getSliceToPlay() -> const std::optional<int>&
+{
+	return m_sliceToPlay;
+}
+
+auto BeatPad::Pad::setSliceToPlay(int sliceNumber) -> void
+{
+	m_sliceToPlay = sliceNumber;
 }

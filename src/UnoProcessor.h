@@ -2,7 +2,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#include "core/SampleSlice.h"
+#include "core/SliceManager.h"
+#include "core/SlicePlayer.h"
 
 class UnoProcessor : public juce::AudioProcessor
 {
@@ -38,8 +39,11 @@ public:
 	void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
-	juce::AudioProcessorValueTreeState m_parameterValueTree;
-	SampleSlice m_sampleSlice;
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoProcessor)
+	juce::AudioProcessorValueTreeState m_parameterValueTree
+		= juce::AudioProcessorValueTreeState{*this, nullptr, "Uno Slicer Parameters", createParameterLayout()};
+	SliceManager m_sliceManager = SliceManager{m_parameterValueTree};
+	SlicePlayer m_slicePlayer;
 	friend class UnoEditor;
+	friend class SlicePlayer;
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnoProcessor)
 };

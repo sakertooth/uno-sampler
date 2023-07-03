@@ -35,7 +35,8 @@ public:
 	std::array<juce::Rectangle<int>, 4> getScreenRegions() const;
 
 	void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-	void selectPad(BeatPad::Pad* pad);
+	void padPressed(BeatPad::Pad* pad);
+	void padUnpressed(BeatPad::Pad* pad);
 
 private:
 	UnoProcessor& m_processorRef;

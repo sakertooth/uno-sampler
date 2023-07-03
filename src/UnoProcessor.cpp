@@ -3,7 +3,14 @@
 #include "UnoEditor.h"
 
 UnoProcessor::UnoProcessor()
-	: m_parameterValueTree(*this, nullptr, "Uno Slicer Parameters", createParameterLayout())
+	: AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+						 .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+						 .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+	)
 {
 }
 
@@ -29,7 +36,7 @@ bool UnoProcessor::isMidiEffect() const
 
 double UnoProcessor::getTailLengthSeconds() const
 {
-	return 0.0;
+	return std::numeric_limits<double>::max();
 }
 
 int UnoProcessor::getNumPrograms()
@@ -57,12 +64,14 @@ void UnoProcessor::changeProgramName([[maybe_unused]] int index, [[maybe_unused]
 {
 }
 
-void UnoProcessor::prepareToPlay([[maybe_unused]] double sampleRate, [[maybe_unused]] int samplesPerBlock)
+void UnoProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+	m_slicePlayer.prepareToPlay(samplesPerBlock, sampleRate);
 }
 
 void UnoProcessor::releaseResources()
 {
+	m_slicePlayer.releaseResources();
 }
 
 bool UnoProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -86,32 +95,7 @@ bool UnoProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 void UnoProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
 	juce::ignoreUnused(midiMessages);
-
-	juce::ScopedNoDenormals noDenormals;
-	auto totalNumInputChannels = getTotalNumInputChannels();
-	auto totalNumOutputChannels = getTotalNumOutputChannels();
-
-	// In case we have more outputs than inputs, this code clears any output
-	// channels that didn't contain input data, (because these aren't
-	// guaranteed to be empty - they may contain garbage).
-	// This is here to avoid people getting screaming feedback
-	// when they first compile a plugin, but obviously you don't need to keep
-	// this code if your algorithm always overwrites all the output channels.
-	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-		buffer.clear(i, 0, buffer.getNumSamples());
-
-	// This is the place where you'd normally do the guts of your plugin's
-	// audio processing...
-	// Make sure to reset the state if your inner loop is processing
-	// the samples and the outer loop is handling the channels.
-	// Alternatively, you can process the samples with the channels
-	// interleaved by keeping the same state.
-	for (int channel = 0; channel < totalNumInputChannels; ++channel)
-	{
-		auto* channelData = buffer.getWritePointer(channel);
-		juce::ignoreUnused(channelData);
-		// ..do something to the data...
-	}
+	m_slicePlayer.getNextAudioBlock(juce::AudioSourceChannelInfo{buffer});
 }
 
 bool UnoProcessor::hasEditor() const
@@ -127,9 +111,9 @@ juce::AudioProcessorEditor* UnoProcessor::createEditor()
 juce::AudioProcessorValueTreeState::ParameterLayout UnoProcessor::createParameterLayout()
 {
 	auto layout = juce::AudioProcessorValueTreeState::ParameterLayout{};
-	for (int i = 0; i < SampleSlice::MAX_NUM_SLICES; ++i)
+	for (int i = 0; i < SliceManager::MAX_NUM_SLICES; ++i)
 	{
-		auto sliceGroup = m_sampleSlice.addSliceParametersToValueTree(i);
+		auto sliceGroup = m_sliceManager.addSliceParametersToValueTree(i);
 		layout.add(std::move(sliceGroup));
 	}
 

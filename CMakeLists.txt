@@ -11,7 +11,8 @@ target_sources(UnoSampler
         src/gui/BeatPad.cpp
         src/gui/KnobWithLabel.cpp
         src/gui/SliceWaveform.cpp
-        src/core/SampleSlice.cpp)
+        src/core/SlicePlayer.cpp
+        src/core/SliceManager.cpp)
 
 target_compile_definitions(UnoSampler
     PUBLIC
