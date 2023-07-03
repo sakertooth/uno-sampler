@@ -39,7 +39,8 @@ public:
 	void padUnpressed(BeatPad::Pad* pad);
 
 private:
-	UnoProcessor& m_processorRef;
+	SliceManager* m_sliceManager;
+	SlicePlayer* m_slicePlayer;
 
 	BeatPad m_beatPad;
 	SliceWaveform m_sliceWaveform;

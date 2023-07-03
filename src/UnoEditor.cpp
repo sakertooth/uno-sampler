@@ -2,7 +2,8 @@
 
 UnoEditor::UnoEditor(UnoProcessor& p)
 	: AudioProcessorEditor(&p)
-	, m_processorRef(p)
+	, m_sliceManager(&p.m_sliceManager)
+	, m_slicePlayer(&p.m_slicePlayer)
 	, m_sliceWaveform(m_formatManager)
 {
 	addAndMakeVisible(m_beatPad);
@@ -137,7 +138,7 @@ void UnoEditor::selectSample()
 
 		auto buffer = std::make_unique<juce::AudioSampleBuffer>(numChannels, numSamples);
 		reader->read(buffer.get(), 0, numSamples, 0, true, true);
-		m_processorRef.m_slicePlayer.setSampleBuffer(std::move(buffer), reader->sampleRate);
+		m_slicePlayer->setSampleBuffer(std::move(buffer), reader->sampleRate);
 
 		m_sliceWaveform.thumbnail().setSource(new juce::FileInputSource{sampleFile});
 		m_sampleNameLabel.setText(sampleFile.getFileNameWithoutExtension(), juce::dontSendNotification);
@@ -155,17 +156,17 @@ void UnoEditor::onPlayButtonClick()
 	case PlayState::Stopped:
 		m_playState = PlayState::Playing;
 		m_playButton.setButtonText("PAUSE");
-		m_processorRef.m_slicePlayer.start();
+		m_slicePlayer->start();
 		break;
 	case PlayState::Playing:
 		m_playState = PlayState::Paused;
 		m_playButton.setButtonText("PLAY");
-		m_processorRef.m_slicePlayer.stop();
+		m_slicePlayer->stop();
 		break;
 	case PlayState::Paused:
 		m_playState = PlayState::Playing;
 		m_playButton.setButtonText("PAUSE");
-		m_processorRef.m_slicePlayer.start();
+		m_slicePlayer->start();
 		break;
 	default:
 		break;
@@ -184,7 +185,7 @@ void UnoEditor::onAddButtonClick()
 	}
 
 	if (firstEmptyPad == nullptr) { return; }
-	auto sliceNumber = m_processorRef.m_sliceManager.appendSlice(m_processorRef.m_slicePlayer.getSampleBuffer());
+	auto sliceNumber = m_sliceManager->appendSlice(m_slicePlayer->getSampleBuffer());
 
 	if (sliceNumber.has_value())
 	{
@@ -205,7 +206,7 @@ void UnoEditor::onRemoveButtonClick()
 	}
 
 	if (lastFilledPad == nullptr) return;
-	auto sliceNumber = m_processorRef.m_sliceManager.appendSlice(m_processorRef.m_slicePlayer.getSampleBuffer());
+	auto sliceNumber = m_sliceManager->appendSlice(m_slicePlayer->getSampleBuffer());
 
 	if (sliceNumber.has_value())
 	{
@@ -241,11 +242,11 @@ void UnoEditor::padPressed(BeatPad::Pad* pad)
 	auto sliceToPlay = pad->getSliceToPlay();
 	if (!sliceToPlay.has_value()) { return; }
 
-	m_processorRef.m_slicePlayer.setSliceToPlay(m_processorRef.m_sliceManager, *sliceToPlay);
-	m_processorRef.m_slicePlayer.start();
+	m_slicePlayer->setSliceToPlay(*m_sliceManager, *sliceToPlay);
+	m_slicePlayer->start();
 }
 
 void UnoEditor::padUnpressed([[maybe_unused]] BeatPad::Pad* pad)
 {
-	m_processorRef.m_slicePlayer.stop();
+	m_slicePlayer->stop();
 }
