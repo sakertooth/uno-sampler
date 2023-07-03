@@ -197,7 +197,7 @@ void UnoEditor::onAddButtonClick()
 void UnoEditor::onRemoveButtonClick()
 {
 	BeatPad::Pad* lastFilledPad = nullptr;
-	auto index = 0;
+	auto index = SliceManager::MAX_NUM_SLICES - 1;
 
 	for (; index >= 0; --index)
 	{
@@ -206,13 +206,9 @@ void UnoEditor::onRemoveButtonClick()
 	}
 
 	if (lastFilledPad == nullptr) return;
-	auto sliceNumber = m_sliceManager->appendSlice(m_slicePlayer->getSampleBuffer());
 
-	if (sliceNumber.has_value())
-	{
-		lastFilledPad->setSliceToPlay(*sliceNumber);
-		lastFilledPad->setState(BeatPad::Pad::State::Empty);
-	}
+	m_sliceManager->resetSlice(index);
+	lastFilledPad->setState(BeatPad::Pad::State::Empty);
 }
 
 std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
