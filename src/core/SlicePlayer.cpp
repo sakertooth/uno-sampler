@@ -41,8 +41,9 @@ auto SlicePlayer::getNumSamplesForSlice(SliceManager& sliceManager, int index) -
 
 auto SlicePlayer::setSliceToPlay(SliceManager& sliceManager, int index) -> void
 {
-	const auto startPosition = sliceManager.getSlicePosition(index);
-	const auto endPosition = startPosition + getNumSamplesForSlice(sliceManager, index);
+	const auto startPosition = static_cast<float>(sliceManager.getSlicePosition(index));
+	const auto endPosition
+		= static_cast<float>(startPosition + static_cast<float>(getNumSamplesForSlice(sliceManager, index)));
 	m_positionRange = {startPosition / m_sampleRate, endPosition / m_sampleRate};
 	m_transportSource.setPosition(m_positionRange.getStart());
 	m_transportSource.setGain(juce::Decibels::decibelsToGain(sliceManager.getSliceLevel(index)));
@@ -53,12 +54,27 @@ auto SlicePlayer::getSampleBuffer() const -> const juce::AudioSampleBuffer&
 	return *m_sampleBuffer;
 }
 
+auto SlicePlayer::getPlaybackPosition() const -> double
+{
+	return m_transportSource.getCurrentPosition();
+}
+
+auto SlicePlayer::getSampleRate() const -> double
+{
+	return m_sampleRate;
+}
+
 auto SlicePlayer::setSampleBuffer(std::unique_ptr<juce::AudioSampleBuffer>&& sampleBuffer, double sampleRate) -> void
 {
 	m_sampleBuffer = std::move(sampleBuffer);
 	m_audioSource = std::make_unique<juce::MemoryAudioSource>(*m_sampleBuffer, false);
 	m_transportSource.setSource(m_audioSource.get(), 0, nullptr, sampleRate, m_sampleBuffer->getNumChannels());
 	m_sampleRate = sampleRate;
+}
+
+auto SlicePlayer::setPlaybackPosition(double position) -> void
+{
+	m_transportSource.setPosition(position);
 }
 
 auto SlicePlayer::start() -> void

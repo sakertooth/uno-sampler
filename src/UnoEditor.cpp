@@ -4,7 +4,7 @@ UnoEditor::UnoEditor(UnoProcessor& p)
 	: AudioProcessorEditor(&p)
 	, m_sliceManager(&p.m_sliceManager)
 	, m_slicePlayer(&p.m_slicePlayer)
-	, m_sliceWaveform(m_formatManager)
+	, m_sliceWaveform(m_formatManager, m_slicePlayer, m_sliceManager)
 {
 	addAndMakeVisible(m_beatPad);
 	addAndMakeVisible(m_sliceLevel);
@@ -191,6 +191,8 @@ void UnoEditor::onAddButtonClick()
 	{
 		firstEmptyPad->setSliceToPlay(*sliceNumber);
 		firstEmptyPad->setState(BeatPad::Pad::State::Filled);
+		m_sliceWaveform.setMarker(
+			*sliceNumber, m_sliceManager->getSlicePosition(*sliceNumber) / m_slicePlayer->getSampleRate());
 	}
 }
 
@@ -209,6 +211,7 @@ void UnoEditor::onRemoveButtonClick()
 
 	m_sliceManager->resetSlice(index);
 	lastFilledPad->setState(BeatPad::Pad::State::Empty);
+	m_sliceWaveform.removeMarker(index);
 }
 
 std::array<juce::Rectangle<int>, 4> UnoEditor::getScreenRegions() const
@@ -239,10 +242,10 @@ void UnoEditor::padPressed(BeatPad::Pad* pad)
 	if (!sliceToPlay.has_value()) { return; }
 
 	m_slicePlayer->setSliceToPlay(*m_sliceManager, *sliceToPlay);
-	m_slicePlayer->start();
+	onPlayButtonClick();
 }
 
 void UnoEditor::padUnpressed([[maybe_unused]] BeatPad::Pad* pad)
 {
-	m_slicePlayer->stop();
+	onPlayButtonClick();
 }

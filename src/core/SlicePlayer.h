@@ -19,10 +19,13 @@ public:
 	auto getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) -> void override;
 	auto getAudioSource() -> juce::MemoryAudioSource*;
 	auto getSampleBuffer() const -> const juce::AudioSampleBuffer&;
+	auto getPlaybackPosition() const -> double;
+	auto getSampleRate() const -> double;
 	auto getNumSamplesForSlice(SliceManager& sliceManager, int index) -> int;
 
 	auto setSampleBuffer(std::unique_ptr<juce::AudioSampleBuffer>&& sampleBuffer, double sampleRate) -> void;
 	auto setSliceToPlay(SliceManager& sliceManager, int index) -> void;
+	auto setPlaybackPosition(double position) -> void;
 
 private:
 	double m_sampleRate = 0;
