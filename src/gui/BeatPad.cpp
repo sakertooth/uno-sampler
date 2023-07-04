@@ -111,6 +111,7 @@ auto BeatPad::Pad::setState(State state) -> void
 	{
 	case State::Empty: {
 		if (m_state == State::Empty) return;
+		m_sliceToPlay = std::nullopt;
 		const auto color = juce::Colours::white;
 		m_button.setColours(color, color.darker(), color.darker(0.6f));
 		m_button.repaint();
