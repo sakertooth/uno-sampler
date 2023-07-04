@@ -66,6 +66,7 @@ auto SlicePlayer::getSampleRate() const -> double
 
 auto SlicePlayer::setSampleBuffer(std::unique_ptr<juce::AudioSampleBuffer>&& sampleBuffer, double sampleRate) -> void
 {
+	if (m_audioSource.get() != nullptr) { m_transportSource.setSource(nullptr); }
 	m_sampleBuffer = std::move(sampleBuffer);
 	m_audioSource = std::make_unique<juce::MemoryAudioSource>(*m_sampleBuffer, false);
 	m_transportSource.setSource(m_audioSource.get(), 0, nullptr, sampleRate, m_sampleBuffer->getNumChannels());
